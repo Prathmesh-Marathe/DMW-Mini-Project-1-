@@ -1,0 +1,5 @@
+# .streamlit/config.toml
+
+[server]
+# Forces the environment to Python 3.11, which still supports the 'cgi' module.
+python_version = "3.11"
