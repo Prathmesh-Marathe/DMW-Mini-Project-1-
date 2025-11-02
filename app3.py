@@ -660,10 +660,19 @@ elif selected == "Fliters":
                 "Select Dimensions (2 required):",
                 options=categorical_cols,
                 default=categorical_cols[:2] if len(categorical_cols) >= 2 else categorical_cols)
-            measures = col2.selectbox(
-                "Select Measure (1 required for values):",
-                options=numeric_cols, default=numeric_cols[:1])
-            measures = [measures] if measures else [] # Ensure measures is a list
+            
+            # --- FIX: Set index for st.selectbox instead of 'default' ---
+            default_measure_index = 0
+            if numeric_cols:
+                measures_name = col2.selectbox(
+                    "Select Measure (1 required for values):",
+                    options=numeric_cols, 
+                    index=default_measure_index)
+            else:
+                measures_name = None
+
+            measures = [measures_name] if measures_name else [] # Ensure measures is a list
+            # --- END FIX ---
         else:
             dimensions = col1.multiselect(
                 "Select Dimensions (for grouping):",
@@ -684,6 +693,7 @@ elif selected == "Fliters":
             slice_values = st.multiselect(
                 f"Select {slice_dimension} values to keep:",
                 options=options_for_slice,
+                default=options_for_slice, # Default select all for convenience
                 key="slice_vals")
             st.session_state.slice_dimension = slice_dimension
             st.session_state.slice_values = slice_values
@@ -728,9 +738,11 @@ elif selected == "Fliters":
                             elif len(dimensions) >= 2 and len(measures) == 1 and operation != "pivot":
                                 st.subheader("Heatmap Visualization")
                                 try:
+                                    # Use the first measure from the 'measures' list for the pivot value
+                                    value_col = result.columns[-1]
                                     pivot_df = result.pivot(
                                         index=dimensions[0], columns=dimensions[1],
-                                        values=measures[0])
+                                        values=value_col)
                                     fig, ax = plt.subplots(figsize=(5, 4)) 
                                     sns.heatmap(pivot_df, annot=True, fmt=".1f",
                                                 cmap="YlGnBu", linewidths=.5,
@@ -964,10 +976,14 @@ elif selected == "Prediction":
                     if df[feat].dtype == 'object':
                         options = sorted(df[feat].dropna().unique().tolist())
                         default_val = df[feat].mode()[0] if not df[feat].mode().empty else (options[0] if options else "Unknown")
+                        
+                        # Find index for selectbox
+                        default_index = options.index(default_val) if default_val in options else 0
+                        
                         input_data[feat] = st.selectbox(
                             feature_map.get(feat, feat).replace('_', ' ').title(),
                             options,
-                            index=options.index(default_val) if default_val in options else 0,
+                            index=default_index, # Fixed default index
                             key=f"pred{feat}")
                             
                     # Numeric input (Slider)
